@@ -1,0 +1,19 @@
+# Dependencies and build output
+**/node_modules/
+**/dist/
+**/dist-ssr/
+
+# Environment files and logs
+**/.env
+**/.env.*
+!**/.env.example
+**/*.log
+
+# Local editor and OS files
+.vscode/
+.idea/
+.DS_Store
+
+# Runtime uploads (keep the directory placeholder)
+server/uploads/*
+!server/uploads/.gitkeep

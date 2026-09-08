@@ -1,0 +1,29 @@
+[
+  {
+    "id": "math101",
+    "title": "Mathematics for Beginners",
+    "description": "Master fundamental math concepts with engaging lessons and practice problems.",
+    "image": "https://placehold.co/600x400/A5B4FC/3730A3?text=Math+Wizards",
+    "instructor": "Prof. Sameer Ahmed",
+    "duration": "12 Hours of Video",
+    "students": 1234
+  },
+  {
+    "id": "phy101",
+    "title": "Introduction to Physics",
+    "description": "Explore the fascinating world of physics, from mechanics to electromagnetism.",
+    "image": "https://placehold.co/600x400/93C5FD/1E40AF?text=Science+Explorers",
+    "instructor": "Dr. Neha Sharma",
+    "duration": "10 Hours of Video",
+    "students": 980
+  },
+   {
+    "id": "web201",
+    "title": "Web Development Bootcamp",
+    "description": "Learn to build modern websites and web applications from scratch.",
+    "image": "https://placehold.co/600x400/FDBA74/7C2D12?text=Code+Ninjas",
+    "instructor": "Anjali Verma",
+    "duration": "18 Hours of Video",
+    "students": 1530
+  }
+]
