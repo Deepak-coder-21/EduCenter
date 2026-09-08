@@ -59,12 +59,18 @@ export const login = async (req, res) => {
     }
 }
 
-export const logout = async(req, res) => {
+export const logout = async (req, res) => {
     try {
-        return res.status(200).cookie("token", "", { maxAge: 0 }).json({success: true, message: "Logged out successfully" })
+        const isProd = process.env.NODE_ENV === 'production';
+        return res.status(200).cookie("token", "", {
+            maxAge: 0,
+            httpOnly: true,
+            sameSite: isProd ? 'none' : 'lax',
+            secure: isProd
+        }).json({ success: true, message: "Logged out successfully" });
     } catch (error) {
         console.error('Error during logout:', error);
-        return res.status(500).json({success: false, message: 'Internal server error' });
+        return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 }
 
@@ -73,9 +79,9 @@ export const getUserProfile = async (req, res) => {
         const userId = req.id;
         const user = await User.findById(userId).select('-password');
         if (!user) {
-            return res.status(404).json({ message: 'User not found', success:false });
+            return res.status(404).json({ message: 'User not found', success: false });
         }
-        return res.status(200).json({success: true, user });
+        return res.status(200).json({ success: true, user });
     } catch (error) {
         console.error('Error fetching user profile:', error);
         return res.status(500).json({ message: 'Internal server error' });
@@ -119,11 +125,11 @@ export const updateUserProfile = async (req, res) => {
             return res.status(404).json({ message: 'User not found', success: false });
         }
         return res.status(200).json({ user: updatedUser, message: 'Profile updated successfully', success: true });
-     }
-     catch (error) {
-         console.error('Error updating user profile:', error);
-         return res.status(500).json({ message: 'Internal server error', success: false });
-     }
+    }
+    catch (error) {
+        console.error('Error updating user profile:', error);
+        return res.status(500).json({ message: 'Internal server error', success: false });
+    }
 };
 
 // Admin: Get all registered users

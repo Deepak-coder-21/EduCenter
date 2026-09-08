@@ -19,11 +19,12 @@ const AdminDashboard = () => {
   const isAdmin = user?.role === 'Admin';
   const isInstructor = user?.role === 'Instructor';
 
-  // Instructors land on 'courses' by default; Admins land on 'dashboard'
+  const dispatch = useDispatch();
   const [activeTab, setActiveTab] = useState(isInstructor ? 'courses' : 'dashboard');
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
   const [isBlogModalOpen, setIsBlogModalOpen] = useState(false);
+  const [isGlobalRefreshing, setIsGlobalRefreshing] = useState(false);
 
   // Keep activeTab aligned if user role changes or if Instructor enters an unauthorized tab
   useEffect(() => {
@@ -74,9 +75,6 @@ const AdminDashboard = () => {
       </div>
     );
   }
-
-  const dispatch = useDispatch();
-  const [isGlobalRefreshing, setIsGlobalRefreshing] = useState(false);
 
   // Global Refresh Handler
   const handleGlobalRefresh = async () => {

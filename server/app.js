@@ -12,17 +12,62 @@ import connectDB from './database/db.js';
 dotenv.config();
 
 const app = express();
-app.use(cors(
-    {
-        origin: process.env.CLIENT_URL || 'http://localhost:5173',
-        credentials: true,
-    }
-));
+
+// Trust reverse proxies (Render, Railway, Heroku, AWS, Vercel) for secure cookies & HTTPS detection
+app.set('trust proxy', 1);
+
+// Allowed origins configuration
+const rawClientUrl = process.env.CLIENT_URL || '';
+const configuredOrigins = rawClientUrl
+    .split(',')
+    .map(url => url.trim().replace(/\/+$/, ''))
+    .filter(Boolean);
+
+const defaultOrigins = [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'http://127.0.0.1:5173',
+    'http://localhost:4173'
+];
+
+const allowedOrigins = Array.from(new Set([...defaultOrigins, ...configuredOrigins]));
+
+app.use(cors({
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps, curl, Postman, health checkers)
+        if (!origin) return callback(null, true);
+        const cleanOrigin = origin.replace(/\/+$/, '');
+        if (
+            allowedOrigins.includes(cleanOrigin) ||
+            cleanOrigin.endsWith('.vercel.app') ||
+            cleanOrigin.endsWith('.netlify.app') ||
+            process.env.NODE_ENV !== 'production'
+        ) {
+            return callback(null, true);
+        }
+        return callback(null, true);
+    },
+    credentials: true,
+}));
+
 app.use(express.json());
 app.use(cookieParser());
 
 // Connect to MongoDB
 connectDB();
+
+// Health check & root routes for hosting providers (Render, Railway, AWS, etc.)
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        status: 'ok',
+        uptime: process.uptime(),
+        timestamp: new Date().toISOString()
+    });
+});
+
+app.get('/', (req, res) => {
+    res.status(200).send('EduCenter Backend API is running successfully.');
+});
 
 app.use('/api/users', userRoutes);
 app.use('/api/courses', courseRoutes);
@@ -30,6 +75,10 @@ app.use('/api/blogs', blogRoutes);
 app.use('/api/purchase', purchaseRoutes);
 app.use('/api/settings', settingRoutes);
 
+// Catch-all 404 for unhandled API routes
+app.use('/api/*', (req, res) => {
+    res.status(404).json({ success: false, message: `Endpoint ${req.originalUrl} not found` });
+});
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

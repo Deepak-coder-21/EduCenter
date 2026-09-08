@@ -2,14 +2,34 @@ import { createApi } from '@reduxjs/toolkit/query/react';
 import { fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import { login, logout as logoutAction } from '../authSlice';
 
-const BASE_API = import.meta.env.VITE_API_URL || '/api';
+const getApiBaseUrl = () => {
+    let url = (import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:3000/api' : '/api')).trim();
+    url = url.replace(/\/+$/, '');
+    if (!url.endsWith('/api')) {
+        url = `${url}/api`;
+    }
+    return url;
+};
+
+export const BASE_API = getApiBaseUrl();
 
 export const authApi = createApi({
     reducerPath: 'authApi',
     tagTypes: ['User', 'Course', 'Blog', 'Stats', 'Lecture', 'CourseStatus', 'Settings'],
     baseQuery: fetchBaseQuery({
         baseUrl: BASE_API,
-        credentials: 'include'
+        credentials: 'include',
+        prepareHeaders: (headers) => {
+            try {
+                const user = JSON.parse(localStorage.getItem('user') || 'null');
+                if (user?.token) {
+                    headers.set('authorization', `Bearer ${user.token}`);
+                }
+            } catch {
+                // Ignore localStorage errors
+            }
+            return headers;
+        },
     }),
     endpoints: (builder) => ({
         // ================= AUTH ENDPOINTS =================
@@ -23,7 +43,11 @@ export const authApi = createApi({
             async onQueryStarted(arg, { queryFulfilled, dispatch }) {
                 try {
                     const result = await queryFulfilled;
-                    dispatch(login(result.data.user));
+                    const userData = result.data?.user ? { ...result.data.user } : {};
+                    if (result.data?.token) {
+                        userData.token = result.data.token;
+                    }
+                    dispatch(login(userData));
                 } catch (error) {
                     console.error('Login failed:', error);
                 }
@@ -92,7 +116,16 @@ export const authApi = createApi({
                 try {
                     const result = await queryFulfilled;
                     if (result.data?.user) {
-                        dispatch(login(result.data.user));
+                        try {
+                            const existing = JSON.parse(localStorage.getItem('user') || 'null');
+                            const merged = {
+                                ...result.data.user,
+                                token: existing?.token || result.data.token || result.data.user?.token
+                            };
+                            dispatch(login(merged));
+                        } catch {
+                            dispatch(login(result.data.user));
+                        }
                     }
                 } catch (error) {
                     if (error?.error?.status === 401) {
@@ -112,7 +145,16 @@ export const authApi = createApi({
                 try {
                     const result = await queryFulfilled;
                     if (result.data?.user) {
-                        dispatch(login(result.data.user));
+                        try {
+                            const existing = JSON.parse(localStorage.getItem('user') || 'null');
+                            const merged = {
+                                ...result.data.user,
+                                token: existing?.token || result.data.token || result.data.user?.token
+                            };
+                            dispatch(login(merged));
+                        } catch {
+                            dispatch(login(result.data.user));
+                        }
                     }
                 } catch (error) {
                     console.error("Update user failed:", error);

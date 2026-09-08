@@ -43,12 +43,6 @@ function Login() {
   const [sendResetOtp, { isLoading: isSendingResetOtp }] = useSendResetOtpMutation();
   const [resetPasswordWithOtp, { isLoading: isResettingPassword }] = useResetPasswordWithOtpMutation();
 
-  // If already authenticated, redirect immediately away from login
-  if (isAuthenticated && user) {
-    const dest = user.role === 'Admin' || user.role === 'Instructor' ? '/admin' : '/';
-    return <Navigate to={dest} replace />;
-  }
-
   // Handle countdown timer
   useEffect(() => {
     let timer;
@@ -61,6 +55,12 @@ function Login() {
     }
     return () => clearInterval(timer);
   }, [isResetCountingDown, resetCountdown]);
+
+  // If already authenticated, redirect immediately away from login
+  if (isAuthenticated && user) {
+    const dest = user.role === 'Admin' || user.role === 'Instructor' ? '/admin' : '/';
+    return <Navigate to={dest} replace />;
+  }
 
   const changeInputHandler = (e) => {
     setLoginInput({

@@ -27,12 +27,6 @@ function Signup() {
   const [sendSignupOtp, { isLoading: isSendingOtp }] = useSendSignupOtpMutation();
   const [verifySignupOtp, { isLoading: isVerifying }] = useVerifySignupOtpMutation();
 
-  // If already authenticated, redirect away from signup
-  if (isAuthenticated && user) {
-    const dest = user.role === 'Admin' || user.role === 'Instructor' ? '/admin' : '/';
-    return <Navigate to={dest} replace />;
-  }
-
   // Countdown timer for OTP resend
   useEffect(() => {
     let timer;
@@ -45,6 +39,12 @@ function Signup() {
     }
     return () => clearInterval(timer);
   }, [isCountingDown, countdown]);
+
+  // If already authenticated, redirect away from signup
+  if (isAuthenticated && user) {
+    const dest = user.role === 'Admin' || user.role === 'Instructor' ? '/admin' : '/';
+    return <Navigate to={dest} replace />;
+  }
 
   const changeInputHandler = (e) => {
     setSignupInput({
