@@ -6,7 +6,7 @@ import Footer from './src/components/Footer';
 import Home from './src/pages/Home';
 import Courses from './src/pages/Courses';
 import CourseDetails from './src/pages/CourseDetails';
-import Dashboard from './src/pages/Dashboard';
+import Dashboard from './src/pages/DashBoard';
 import ContactUs from './src/pages/ContactUs';
 import Login from './src/pages/Login';
 import Signup from './src/pages/Signup';
