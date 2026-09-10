@@ -17,6 +17,7 @@ import Blog from './src/pages/Blog';
 import MyLearning from './src/pages/MyLearnig';
 import EditProfile from './src/pages/EditProfile';
 import AdminDashboard from './src/components/admin/AdminDashboard';
+import ScrollToTop from './src/components/ScrollToTop';
 import { useLoadUserQuery } from './src/features/api/authApi';
 import { useSelector } from 'react-redux';
 import { Navigate } from 'react-router-dom';
@@ -72,6 +73,7 @@ function AppContent() {
 function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <AppContent />
     </BrowserRouter>
   );

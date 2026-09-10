@@ -223,7 +223,7 @@ const LectureModal = ({ course, isOpen, onClose }) => {
                 <div className="aspect-video w-full max-h-56 rounded-xl overflow-hidden bg-black flex items-center justify-center">
                   <VideoPlayer
                     url={activePreviewLecture.videoUrl}
-                    autoPlay
+                    autoPlay={false}
                     title={activePreviewLecture.lectureTitle}
                     className="w-full h-full object-contain"
                   />

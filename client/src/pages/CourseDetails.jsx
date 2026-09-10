@@ -222,7 +222,7 @@ function CourseDetails() {
                     <VideoPlayer
                       url={activeLecture.videoUrl}
                       poster={image}
-                      autoPlay={activeLecture.isPreviewFree}
+                      autoPlay={false}
                       title={activeLecture.lectureTitle}
                       className="w-full h-full object-contain"
                     />
