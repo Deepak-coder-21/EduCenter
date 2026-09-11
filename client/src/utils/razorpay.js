@@ -121,10 +121,10 @@ const showSandboxCheckoutModal = ({
       <div class="p-6 space-y-4">
         <div class="bg-indigo-50/70 rounded-2xl p-4 border border-indigo-100">
           <p class="text-xs text-indigo-700 font-semibold uppercase tracking-wider">Order Summary</p>
-          <p class="font-bold text-gray-900 mt-1 line-clamp-1">${courseTitle}</p>
+          <p id="sandbox-modal-course-title" class="font-bold text-gray-900 mt-1 line-clamp-1"></p>
           <div class="flex items-baseline justify-between mt-3 pt-3 border-t border-indigo-100/60">
             <span class="text-xs text-gray-500">Total Payable</span>
-            <span class="text-2xl font-extrabold text-indigo-600">₹${amount}</span>
+            <span id="sandbox-modal-amount" class="text-2xl font-extrabold text-indigo-600"></span>
           </div>
         </div>
 
@@ -138,7 +138,7 @@ const showSandboxCheckoutModal = ({
         <div class="space-y-2 pt-2">
           <button id="sandbox-pay-btn" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl shadow-lg shadow-indigo-600/30 transition flex items-center justify-center gap-2">
             <i class="fas fa-lock text-sm"></i>
-            <span>Complete Test Payment (₹${amount})</span>
+            <span id="sandbox-modal-btn-text"></span>
           </button>
           <button id="sandbox-cancel-btn" class="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-xl transition">
             Cancel
@@ -147,6 +147,16 @@ const showSandboxCheckoutModal = ({
       </div>
     </div>
   `;
+
+  // Safely populate text via textContent to completely prevent DOM-based XSS
+  const titleEl = backdrop.querySelector('#sandbox-modal-course-title');
+  if (titleEl) titleEl.textContent = courseTitle || 'Course';
+
+  const amountEl = backdrop.querySelector('#sandbox-modal-amount');
+  if (amountEl) amountEl.textContent = `₹${amount || 0}`;
+
+  const btnTextEl = backdrop.querySelector('#sandbox-modal-btn-text');
+  if (btnTextEl) btnTextEl.textContent = `Complete Test Payment (₹${amount || 0})`;
 
   document.body.appendChild(backdrop);
 

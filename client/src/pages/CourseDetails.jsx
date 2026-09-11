@@ -210,9 +210,9 @@ function CourseDetails() {
         </div>
 
         {/* Video Player & Curriculum Playlist Area */}
-        <div id="video-player-container" className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mb-12">
-          {/* Main Video Player Screen (Column 1 - 7 cols) */}
-          <div className="lg:col-span-8 space-y-4">
+        <div id="video-player-container" className="grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-8 items-start mb-12">
+          {/* Main Video Player Screen (Column 1 - 7/8 cols) */}
+          <div className="md:col-span-7 lg:col-span-8 space-y-4">
             <div className="bg-black/90 rounded-3xl overflow-hidden shadow-2xl border border-white/10 relative">
               {/* If course has lectures and an active lecture is selected */}
               {activeLecture ? (
@@ -337,8 +337,8 @@ function CourseDetails() {
             </div>
           </div>
 
-          {/* Right Column: Curriculum Playlist & Enrollment Checkout Card (4 cols) */}
-          <div className="lg:col-span-4 space-y-6">
+          {/* Right Column: Curriculum Playlist & Enrollment Checkout Card (4/5 cols) */}
+          <div className="md:col-span-5 lg:col-span-4 space-y-6">
             {/* Enrollment & Pricing Box */}
             <div className="bg-white text-gray-900 rounded-3xl p-6 shadow-2xl border border-gray-100 space-y-5">
               <div className="flex items-baseline justify-between">

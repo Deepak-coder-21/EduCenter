@@ -1,6 +1,7 @@
 import express from 'express';
 import isAuthenticated from '../middlewares/isAuthenticated.js';
 import { authorizeRoles } from '../middlewares/authorizeRole.js';
+import { validateObjectId } from '../middlewares/validateObjectId.js';
 import {
     getAllBlogs,
     getBlogById,
@@ -21,11 +22,11 @@ const blogUpload = upload.fields([
 
 // Public blog routes
 router.route("/").get(getAllBlogs);
-router.route("/:id").get(getBlogById);
+router.route("/:id").get(validateObjectId('id'), getBlogById);
 
 // Blog & Content Manager actions (Admin and Instructor both have access)
 router.route("/").post(isAuthenticated, authorizeRoles('Admin', 'Instructor'), blogUpload, createBlog);
-router.route("/:id").put(isAuthenticated, authorizeRoles('Admin', 'Instructor'), blogUpload, updateBlog);
-router.route("/:id").delete(isAuthenticated, authorizeRoles('Admin', 'Instructor'), deleteBlog);
+router.route("/:id").put(isAuthenticated, authorizeRoles('Admin', 'Instructor'), validateObjectId('id'), blogUpload, updateBlog);
+router.route("/:id").delete(isAuthenticated, authorizeRoles('Admin', 'Instructor'), validateObjectId('id'), deleteBlog);
 
 export default router;

@@ -3,6 +3,7 @@ import User from '../models/user.js';
 import Blog from '../models/blog.js';
 import Lecture from '../models/lecture.js';
 import { uploadMedia, deleteMediaFromCloudinary, deleteVideoFromCloudinary } from '../utils/cloudinary.js';
+import { escapeRegex } from '../utils/escapeRegex.js';
 
 
 // Get all courses (supports query parameters for admin / public)
@@ -12,20 +13,21 @@ export const getAllCourses = async (req, res) => {
         let query = {};
 
         if (isPublished !== undefined) {
-            query.isPublished = isPublished === 'true';
+            query.isPublished = String(isPublished) === 'true';
         }
-        if (search) {
+        if (typeof search === 'string' && search.trim().length > 0) {
+            const safeSearch = escapeRegex(search.trim().slice(0, 100));
             query.$or = [
-                { courseTitle: { $regex: search, $options: 'i' } },
-                { subTitle: { $regex: search, $options: 'i' } },
-                { description: { $regex: search, $options: 'i' } }
+                { courseTitle: { $regex: safeSearch, $options: 'i' } },
+                { subTitle: { $regex: safeSearch, $options: 'i' } },
+                { description: { $regex: safeSearch, $options: 'i' } }
             ];
         }
-        if (category && category !== 'All') {
-            query.category = category;
+        if (typeof category === 'string' && category.trim() !== '' && category !== 'All') {
+            query.category = category.trim();
         }
-        if (level && level !== 'All') {
-            query.courseLevel = level;
+        if (typeof level === 'string' && level.trim() !== '' && level !== 'All') {
+            query.courseLevel = level.trim();
         }
 
         const courses = await Course.find(query)

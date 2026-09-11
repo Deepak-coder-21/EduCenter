@@ -60,9 +60,9 @@ function ContactUs() {
       {/* Contact Section */}
       <main className="py-16 bg-gray-50/50">
         <div className="container mx-auto px-6">
-          <div className="grid lg:grid-cols-5 gap-12">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12">
             {/* Contact Form */}
-            <div className="lg:col-span-3 bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+            <div className="md:col-span-7 bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-gray-100">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Send us a Message</h2>
               <form onSubmit={handleSendMessage}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -147,7 +147,7 @@ function ContactUs() {
             </div>
 
             {/* Contact Info & Map */}
-            <div className="lg:col-span-2 space-y-8">
+            <div className="md:col-span-5 space-y-8">
               <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
                 <h3 className="text-xl font-bold text-gray-900 mb-6">Contact Information</h3>
                 <ul className="space-y-5 text-gray-600 text-sm">

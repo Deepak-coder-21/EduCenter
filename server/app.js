@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
+import mongoSanitize from 'express-mongo-sanitize';
 
 import userRoutes from './routes/user.Routes.js';
 import courseRoutes from './routes/courseRoutes.js';
@@ -37,21 +38,27 @@ app.use(cors({
         // Allow requests with no origin (like mobile apps, curl, Postman, health checkers)
         if (!origin) return callback(null, true);
         const cleanOrigin = origin.replace(/\/+$/, '');
-        if (
-            allowedOrigins.includes(cleanOrigin) ||
-            cleanOrigin.endsWith('.vercel.app') ||
-            cleanOrigin.endsWith('.netlify.app') ||
-            process.env.NODE_ENV !== 'production'
-        ) {
+
+        const isAllowedOrigin = allowedOrigins.includes(cleanOrigin);
+        const isLocalDevOrigin = process.env.NODE_ENV !== 'production' &&
+            /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(cleanOrigin);
+
+        if (isAllowedOrigin || isLocalDevOrigin) {
             return callback(null, true);
         }
-        return callback(null, true);
+        return callback(new Error(`Origin ${origin} not allowed by CORS policy`), false);
     },
     credentials: true,
 }));
 
 app.use(express.json());
 app.use(cookieParser());
+app.use(mongoSanitize({
+    replaceWith: '_',
+    onSanitize: ({ req, key }) => {
+        console.warn(`[SECURITY] Sanitized forbidden NoSQL key: ${key} in ${req.originalUrl}`);
+    }
+}));
 
 // Connect to MongoDB
 connectDB();

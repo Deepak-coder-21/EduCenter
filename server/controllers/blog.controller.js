@@ -1,6 +1,7 @@
 import fs from 'fs';
 import Blog from '../models/blog.js';
 import { uploadMedia, uploadRaw, deleteMediaFromCloudinary, deleteRawFromCloudinary } from '../utils/cloudinary.js';
+import { escapeRegex } from '../utils/escapeRegex.js';
 
 // Helper to remove temporary files stored on disk by multer
 const cleanupTempFile = (file) => {
@@ -35,15 +36,16 @@ export const getAllBlogs = async (req, res) => {
         const { search, category } = req.query;
         let query = {};
 
-        if (search) {
+        if (typeof search === 'string' && search.trim().length > 0) {
+            const safeSearch = escapeRegex(search.trim().slice(0, 100));
             query.$or = [
-                { title: { $regex: search, $options: 'i' } },
-                { author: { $regex: search, $options: 'i' } },
-                { content: { $regex: search, $options: 'i' } }
+                { title: { $regex: safeSearch, $options: 'i' } },
+                { author: { $regex: safeSearch, $options: 'i' } },
+                { content: { $regex: safeSearch, $options: 'i' } }
             ];
         }
-        if (category && category !== 'All') {
-            query.category = category;
+        if (typeof category === 'string' && category.trim() !== '' && category !== 'All') {
+            query.category = category.trim();
         }
 
         const blogs = await Blog.find(query).sort({ createdAt: -1 });

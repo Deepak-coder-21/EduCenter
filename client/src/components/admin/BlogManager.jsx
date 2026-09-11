@@ -7,6 +7,7 @@ import {
 } from '../../features/api/authApi';
 import { useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
+import { sanitizeHtml } from '../../utils/sanitizeHtml';
 
 const categories = [
   'All',
@@ -114,7 +115,7 @@ const BlogManager = ({ isModalOpen, setIsModalOpen }) => {
     setReplaceAllPdfs(false);
     setIsModalOpen(true);
     setTimeout(() => {
-      if (contentRef.current) contentRef.current.innerHTML = b.content || '';
+      if (contentRef.current) contentRef.current.innerHTML = sanitizeHtml(b.content || '');
     }, 50);
   };
 
@@ -185,7 +186,8 @@ const BlogManager = ({ isModalOpen, setIsModalOpen }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const contentHtml = contentRef.current?.innerHTML || formData.content;
+    const rawContent = contentRef.current?.innerHTML || formData.content;
+    const contentHtml = sanitizeHtml(rawContent);
 
     if (!formData.title || !contentHtml.trim()) {
       toast.error('Please provide a title and article content.');

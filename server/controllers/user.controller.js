@@ -9,17 +9,22 @@ import { sendEmail } from '../utils/sendEmail.js';
 export const register = async (req, res) => {
     try {
         const { name, email, password } = req.body;
-        if (!name || !email || !password) {
+        if (typeof name !== 'string' || typeof email !== 'string' || typeof password !== 'string') {
+            return res.status(400).json({ message: 'All fields must be valid text strings' });
+        }
+        const cleanName = name.trim();
+        const cleanEmail = email.toLowerCase().trim();
+        if (!cleanName || !cleanEmail || !password) {
             return res.status(400).json({ message: 'All fields are required' });
         }
-        const existingUser = await User.findOne({ email });
+        const existingUser = await User.findOne({ email: cleanEmail });
         if (existingUser) {
             return res.status(400).json({ message: 'User already exists' });
         }
         const hashedPassword = await bcrypt.hash(password, 10);
         await User.create({
-            name,
-            email,
+            name: cleanName,
+            email: cleanEmail,
             password: hashedPassword
         });
         return res.status(201).json({ message: 'User registered successfully' });
@@ -33,15 +38,15 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
     try {
         const { email, password } = req.body;
-        if (!email || !password) {
-            return res.status(400).json({ message: 'Username and password are required' });
+        if (typeof email !== 'string' || typeof password !== 'string') {
+            return res.status(400).json({ message: 'Email and password must be valid text strings' });
         }
         const cleanEmail = email.toLowerCase().trim();
-        const smtpAdminEmail = (process.env.SMTP_USER || '').toLowerCase().trim();
+        if (!cleanEmail || !password) {
+            return res.status(400).json({ message: 'Username and password are required' });
+        }
 
-        const user = await User.findOne({
-            email: { $regex: new RegExp(`^${cleanEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
-        });
+        const user = await User.findOne({ email: cleanEmail });
         if (!user) {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
@@ -51,7 +56,6 @@ export const login = async (req, res) => {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
         generateToken(res, user, `Welcome back ${user.name}`);
-        // return res.status(200).json({ message: 'Login successful', userId: user._id });
     }
     catch (error) {
         console.error('Error during login:', error);
@@ -208,11 +212,12 @@ export const deleteUser = async (req, res) => {
 export const sendSignupOtp = async (req, res) => {
     try {
         const { email, name } = req.body;
-        if (!email) {
-            return res.status(400).json({ success: false, message: 'Email address is required' });
+        if (typeof email !== 'string' || !email.trim()) {
+            return res.status(400).json({ success: false, message: 'Valid email address is required' });
         }
 
         const cleanEmail = email.toLowerCase().trim();
+        const safeName = typeof name === 'string' ? name.trim() : '';
 
         // Ensure user doesn't already exist
         const existingUser = await User.findOne({ email: cleanEmail });
@@ -246,7 +251,7 @@ export const sendSignupOtp = async (req, res) => {
         // Send email with OTP
         await sendEmail({
             to: cleanEmail,
-            name: name || '',
+            name: safeName,
             otp,
             purpose: 'signup',
         });
@@ -267,7 +272,15 @@ export const sendSignupOtp = async (req, res) => {
 export const verifySignupOtp = async (req, res) => {
     try {
         const { name, email, password, otp } = req.body;
-        if (!name || !email || !password || !otp) {
+        if (
+            typeof name !== 'string' ||
+            typeof email !== 'string' ||
+            typeof password !== 'string' ||
+            (typeof otp !== 'string' && typeof otp !== 'number')
+        ) {
+            return res.status(400).json({ success: false, message: 'All fields including verification code must be valid strings' });
+        }
+        if (!name.trim() || !email.trim() || !password || !otp) {
             return res.status(400).json({ success: false, message: 'All fields including the verification code are required' });
         }
 
@@ -326,17 +339,15 @@ export const verifySignupOtp = async (req, res) => {
 export const sendResetPasswordOtp = async (req, res) => {
     try {
         const { email } = req.body;
-        if (!email) {
-            return res.status(400).json({ success: false, message: 'Email address is required' });
+        if (typeof email !== 'string' || !email.trim()) {
+            return res.status(400).json({ success: false, message: 'Valid email address is required' });
         }
 
         const cleanEmail = email.toLowerCase().trim();
         const smtpAdminEmail = (process.env.SMTP_USER || '').toLowerCase().trim();
 
-        // Check if user exists (case-insensitive)
-        let user = await User.findOne({
-            email: { $regex: new RegExp(`^${cleanEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
-        });
+        // Check if user exists using exact index lookup
+        let user = await User.findOne({ email: cleanEmail });
 
         // SMTP_USER is always an Admin. If it doesn't exist yet, auto-create it in the database.
         if (!user && smtpAdminEmail && cleanEmail === smtpAdminEmail) {
@@ -425,7 +436,14 @@ export const sendResetPasswordOtp = async (req, res) => {
 export const resetPasswordWithOtp = async (req, res) => {
     try {
         const { email, otp, newPassword } = req.body;
-        if (!email || !otp || !newPassword) {
+        if (
+            typeof email !== 'string' ||
+            (typeof otp !== 'string' && typeof otp !== 'number') ||
+            typeof newPassword !== 'string'
+        ) {
+            return res.status(400).json({ success: false, message: 'Email, verification code, and new password must be valid strings' });
+        }
+        if (!email.trim() || !otp || !newPassword) {
             return res.status(400).json({ success: false, message: 'Email, verification code, and new password are required' });
         }
 
@@ -436,9 +454,7 @@ export const resetPasswordWithOtp = async (req, res) => {
         const cleanEmail = email.toLowerCase().trim();
         const smtpAdminEmail = (process.env.SMTP_USER || '').toLowerCase().trim();
 
-        let user = await User.findOne({
-            email: { $regex: new RegExp(`^${cleanEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
-        });
+        let user = await User.findOne({ email: cleanEmail });
 
         // If user was not yet created for SMTP_USER, create it as Admin
         if (!user && smtpAdminEmail && cleanEmail === smtpAdminEmail) {

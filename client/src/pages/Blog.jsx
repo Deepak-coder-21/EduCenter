@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useGetBlogsQuery } from '../features/api/authApi';
 import { toast } from 'react-toastify';
+import { sanitizeHtml } from '../utils/sanitizeHtml';
 
 // Force-download a PDF from any origin using fetch + Blob
 const downloadPdf = async (pdfUrl, filename = 'notes.pdf', setDownloading) => {
@@ -177,7 +178,7 @@ function Blog() {
                     </h2>
                     <div
                       className="text-gray-600 text-xs sm:text-sm mb-4 sm:mb-6 line-clamp-3 leading-relaxed flex-grow prose prose-sm break-words"
-                      dangerouslySetInnerHTML={{ __html: b.content }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(b.content) }}
                     ></div>
 
                     <div className="mt-auto pt-3 sm:pt-4 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
@@ -261,7 +262,7 @@ function Blog() {
               {/* Rich Body Content */}
               <div
                 className="prose prose-indigo max-w-none text-gray-700 leading-relaxed text-sm sm:text-base space-y-3 sm:space-y-4 pt-1 sm:pt-2 break-words [word-break:break-word] overflow-hidden [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-xl [&_pre]:overflow-x-auto [&_pre]:max-w-full [&_table]:w-full [&_table]:overflow-x-auto [&_table]:block"
-                dangerouslySetInnerHTML={{ __html: activeArticle.content }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(activeArticle.content) }}
               ></div>
 
               {/* Study Materials & Notes (PDF List) Section */}
