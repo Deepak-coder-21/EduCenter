@@ -52,7 +52,7 @@ function Navbar() {
   const currentUser = user || userData?.user;
 
   return (
-    <nav className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50 w-full">
+    <nav className="bg-white/95 backdrop-blur-md shadow-xs border-b border-gray-100 sticky top-0 z-50 w-full">
       <div className="container mx-auto px-4 sm:px-6 h-16 sm:h-[68px] flex justify-between items-center max-w-7xl">
         <NavLink to="/" className="text-xl sm:text-2xl font-extrabold text-indigo-600 flex items-center shrink-0 tracking-tight">
           <i className="fas fa-graduation-cap mr-2 sm:mr-2.5 text-indigo-600 text-xl sm:text-2xl"></i>
