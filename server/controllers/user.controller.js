@@ -3,7 +3,7 @@ import Otp from '../models/otp.js';
 import bcrypt from 'bcryptjs';
 import { generateToken } from '../utils/generateToken.js';
 import { uploadMedia, deleteMediaFromCloudinary } from '../utils/cloudinary.js';
-import { sendEmail } from '../utils/sendEmail.js';
+import { sendEmail, verifySmtpConnection } from '../utils/sendEmail.js';
 
 
 export const register = async (req, res) => {
@@ -262,7 +262,10 @@ export const sendSignupOtp = async (req, res) => {
         });
     } catch (error) {
         console.error('Error in sendSignupOtp:', error);
-        return res.status(500).json({ success: false, message: 'Failed to send verification code. Please try again.' });
+        return res.status(500).json({ 
+            success: false, 
+            message: error.message || 'Failed to send verification code. Please try again.' 
+        });
     }
 };
 
@@ -370,11 +373,9 @@ export const sendResetPasswordOtp = async (req, res) => {
         // When any user with Admin role requests password reset, send OTP to SMTP_USER.
         // When any user with Student role (including those converted from Admin to Student) requests reset,
         // ALWAYS send OTP directly to the student's email address!
-        const recipientEmail = (isAdmin && smtpAdminEmail) ? smtpAdminEmail : cleanEmail;
-
         // Rate limiting check (60 seconds cooldown)
         const recentOtp = await Otp.findOne({
-            email: { $in: [cleanEmail, recipientEmail] },
+            email: { $in: [cleanEmail, smtpAdminEmail].filter(Boolean) },
             purpose: 'reset_password',
             createdAt: { $gte: new Date(Date.now() - 60 * 1000) }
         });
@@ -386,47 +387,55 @@ export const sendResetPasswordOtp = async (req, res) => {
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
         // Clear previous reset OTPs
+        const trackingEmails = Array.from(new Set([cleanEmail, smtpAdminEmail].filter(Boolean)));
         await Otp.deleteMany({
-            email: { $in: [cleanEmail, recipientEmail] },
+            email: { $in: trackingEmails },
             purpose: 'reset_password'
         });
 
-        // Save OTP records for both emails so verification succeeds with either
-        await Otp.create({
-            email: cleanEmail,
-            otp,
-            purpose: 'reset_password',
-        });
-
-        if (recipientEmail !== cleanEmail) {
+        // Save OTP records for valid emails so verification succeeds
+        for (const targetEmail of trackingEmails) {
             await Otp.create({
-                email: recipientEmail,
+                email: targetEmail,
                 otp,
                 purpose: 'reset_password',
             });
         }
 
-        // Send email with OTP to recipientEmail (which is SMTP_USER for admin accounts)
+        // Primary: ALWAYS send OTP to cleanEmail entered by the user
         await sendEmail({
-            to: recipientEmail,
-            name: (user.name || 'Admin').trim(),
+            to: cleanEmail,
+            name: (user.name || 'User').trim(),
             otp,
             purpose: 'reset_password',
         });
 
-        const successMessage = (isAdmin && smtpAdminEmail && cleanEmail !== smtpAdminEmail)
-            ? `Admin verification code sent to ${smtpAdminEmail}`
-            : `Password reset code sent to ${cleanEmail}`;
+        // If user is Admin and has a separate smtpAdminEmail, notify admin mailbox too
+        if (isAdmin && smtpAdminEmail && cleanEmail !== smtpAdminEmail) {
+            try {
+                await sendEmail({
+                    to: smtpAdminEmail,
+                    name: (user.name || 'Admin').trim(),
+                    otp,
+                    purpose: 'reset_password',
+                });
+            } catch (notifyErr) {
+                console.warn('Could not notify secondary admin mailbox:', notifyErr.message);
+            }
+        }
 
         return res.status(200).json({
             success: true,
-            message: successMessage,
-            sentTo: recipientEmail,
+            message: `Password reset code sent to ${cleanEmail}`,
+            sentTo: cleanEmail,
             isAdmin,
         });
     } catch (error) {
         console.error('Error in sendResetPasswordOtp:', error);
-        return res.status(500).json({ success: false, message: 'Failed to send password reset code' });
+        return res.status(500).json({ 
+            success: false, 
+            message: error.message || 'Failed to send password reset code' 
+        });
     }
 };
 
@@ -505,5 +514,23 @@ export const resetPasswordWithOtp = async (req, res) => {
     }
 };
 
-
-
+/**
+ * Diagnostic Endpoint: Check email service status
+ * Accessible at GET /api/users/check-smtp
+ */
+export const checkSmtpStatus = async (req, res) => {
+    try {
+        const result = await verifySmtpConnection();
+        return res.status(result.success ? 200 : 500).json({
+            ...result,
+            timestamp: new Date().toISOString(),
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            configured: false,
+            message: error.message,
+            timestamp: new Date().toISOString(),
+        });
+    }
+};

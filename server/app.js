@@ -25,6 +25,7 @@ const configuredOrigins = rawClientUrl
     .filter(Boolean);
 
 const defaultOrigins = [
+    'https://edu-center-three.vercel.app',
     'http://localhost:5173',
     'http://localhost:3000',
     'http://127.0.0.1:5173',
@@ -42,11 +43,14 @@ app.use(cors({
         const isAllowedOrigin = allowedOrigins.includes(cleanOrigin);
         const isLocalDevOrigin = process.env.NODE_ENV !== 'production' &&
             /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(cleanOrigin);
+        const isVercelOrigin = /^https:\/\/[a-zA-Z0-9_.-]+\.vercel\.app$/.test(cleanOrigin);
 
-        if (isAllowedOrigin || isLocalDevOrigin) {
+        if (isAllowedOrigin || isLocalDevOrigin || isVercelOrigin) {
             return callback(null, true);
         }
-        return callback(new Error(`Origin ${origin} not allowed by CORS policy`), false);
+
+        console.warn(`[CORS WARN] Origin ${origin} not explicitly whitelisted. Allowed: ${allowedOrigins.join(', ')}`);
+        return callback(null, false);
     },
     credentials: true,
 }));

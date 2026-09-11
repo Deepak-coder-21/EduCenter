@@ -12,6 +12,7 @@ import {
     verifySignupOtp,
     sendResetPasswordOtp,
     resetPasswordWithOtp,
+    checkSmtpStatus,
 } from '../controllers/user.controller.js';
 import isAuthenticated from '../middlewares/isAuthenticated.js';
 import { authorizeRoles } from '../middlewares/authorizeRole.js';
@@ -25,7 +26,8 @@ router.route('/logout').get(logout);
 router.route('/profile').get(isAuthenticated, getUserProfile);
 router.route('/profile/update').put(isAuthenticated, upload.single('profilePhoto'), updateUserProfile);
 
-// OTP Authentication Routes
+// OTP Authentication Routes & Diagnostic
+router.route('/check-smtp').get(checkSmtpStatus);
 router.route('/send-signup-otp').post(sendSignupOtp);
 router.route('/verify-signup-otp').post(verifySignupOtp);
 router.route('/send-reset-otp').post(sendResetPasswordOtp);
