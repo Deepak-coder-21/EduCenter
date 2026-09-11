@@ -5,7 +5,7 @@ import nodemailer from 'nodemailer';
  * Works 100% reliably on Render, AWS, Vercel, and anywhere outbound SMTP ports are blocked.
  */
 const sendViaBrevo = async ({ to, subject, htmlContent, name }) => {
-  const brevoApiKey = process.env.BREVO_API_KEY?.trim()?.replace(/^["']|["']$/g, '');
+  const brevoApiKey = process.env.BREVO_API_KEY?.trim();
   const senderEmail = process.env.SMTP_USER?.trim() || process.env.BREVO_SENDER || 'deepak2005dev@gmail.com';
 
   const payload = {
@@ -104,15 +104,6 @@ export const verifySmtpConnection = async () => {
 
   // Check Brevo HTTP API
   if (brevoApiKey) {
-    if (brevoApiKey.startsWith('xsmtpsib-')) {
-      return {
-        success: false,
-        configured: true,
-        provider: 'brevo',
-        message: 'You entered a Brevo SMTP key (xsmtpsib-...) instead of an API key! In Brevo, go to SMTP & API -> click the "API Keys" tab (not SMTP tab) -> Generate a new API key (starts with xkeysib-...).',
-      };
-    }
-
     try {
       const res = await fetch('https://api.brevo.com/v3/account', {
         headers: { 'api-key': brevoApiKey },
@@ -131,7 +122,7 @@ export const verifySmtpConnection = async () => {
         success: false,
         configured: true,
         provider: 'brevo',
-        message: `Brevo API key rejected: ${data.message || res.statusText}. Please verify the key at https://app.brevo.com/settings/keys/api`,
+        message: `Brevo API key rejected: ${data.message || res.statusText}`,
       };
     } catch (err) {
       return {
@@ -225,8 +216,8 @@ export const sendEmail = async ({ to, subject, otp, purpose = 'Verification', na
     (smtpUser && smtpPass && smtpPass !== 'your_gmail_app_password_here')
   );
 
-  const purposeTitle = purpose === 'signup' 
-    ? 'Email Verification Code' 
+  const purposeTitle = purpose === 'signup'
+    ? 'Email Verification Code'
     : 'Password Reset Code';
 
   const purposeDescription = purpose === 'signup'

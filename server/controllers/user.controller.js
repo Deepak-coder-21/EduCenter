@@ -372,9 +372,9 @@ export const sendResetPasswordOtp = async (req, res) => {
         // When any user with Admin role requests password reset, send OTP to SMTP_USER.
         // When any user with Student role (including those converted from Admin to Student) requests reset,
         // ALWAYS send OTP directly to the student's email address!
-        // Rate limiting check (60 seconds cooldown)
+        // Rate limiting check (60 seconds cooldown per email)
         const recentOtp = await Otp.findOne({
-            email: { $in: [cleanEmail, smtpAdminEmail].filter(Boolean) },
+            email: cleanEmail,
             purpose: 'reset_password',
             createdAt: { $gte: new Date(Date.now() - 60 * 1000) }
         });
@@ -385,43 +385,26 @@ export const sendResetPasswordOtp = async (req, res) => {
         // Generate 6-digit OTP
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-        // Clear previous reset OTPs
-        const trackingEmails = Array.from(new Set([cleanEmail, smtpAdminEmail].filter(Boolean)));
+        // Clear previous reset OTPs for this email
         await Otp.deleteMany({
-            email: { $in: trackingEmails },
+            email: cleanEmail,
             purpose: 'reset_password'
         });
 
-        // Save OTP records for valid emails so verification succeeds
-        for (const targetEmail of trackingEmails) {
-            await Otp.create({
-                email: targetEmail,
-                otp,
-                purpose: 'reset_password',
-            });
-        }
+        // Save OTP record
+        await Otp.create({
+            email: cleanEmail,
+            otp,
+            purpose: 'reset_password',
+        });
 
-        // Primary: ALWAYS send OTP to cleanEmail entered by the user
+        // Primary: ALWAYS send OTP directly to cleanEmail entered by the user
         await sendEmail({
             to: cleanEmail,
             name: (user.name || 'User').trim(),
             otp,
             purpose: 'reset_password',
         });
-
-        // If user is Admin and has a separate smtpAdminEmail, notify admin mailbox too
-        if (isAdmin && smtpAdminEmail && cleanEmail !== smtpAdminEmail) {
-            try {
-                await sendEmail({
-                    to: smtpAdminEmail,
-                    name: (user.name || 'Admin').trim(),
-                    otp,
-                    purpose: 'reset_password',
-                });
-            } catch (notifyErr) {
-                // Silently ignore secondary notification error
-            }
-        }
 
         return res.status(200).json({
             success: true,
