@@ -32,7 +32,6 @@ const sendViaBrevo = async ({ to, subject, htmlContent, name }) => {
     throw new Error(`Brevo API error: ${errText}`);
   }
 
-  console.log(`✅ [BREVO SUCCESS] Email sent to ${to} via HTTPS Port 443 (MessageId: ${data.messageId})`);
   return { success: true, messageId: data.messageId, provider: 'brevo' };
 };
 
@@ -64,7 +63,6 @@ const sendViaResend = async ({ to, subject, htmlContent }) => {
     throw new Error(`Resend API error: ${errText}`);
   }
 
-  console.log(`✅ [RESEND SUCCESS] Email sent to ${to} via HTTPS Port 443 (MessageId: ${data.id})`);
   return { success: true, messageId: data.id, provider: 'resend' };
 };
 
@@ -229,15 +227,9 @@ export const sendEmail = async ({ to, subject, otp, purpose = 'Verification', na
   if (!isConfigured) {
     if (process.env.NODE_ENV === 'production') {
       const errMsg = 'Email delivery failed: No email credentials found. Set BREVO_API_KEY in your hosting dashboard.';
-      console.error(`❌ [EMAIL ERROR] ${errMsg}`);
       throw new Error(errMsg);
     }
 
-    console.log('\n===========================================================');
-    console.log(`⚠️  [DEV SIMULATION] Email not configured in local .env`);
-    console.log(`📧  Recipient: ${to}`);
-    console.log(`🔑  OTP Code:  ${otp} (${purposeTitle})`);
-    console.log('===========================================================\n');
     return { success: true, simulated: true, otp };
   }
 
@@ -317,25 +309,20 @@ export const sendEmail = async ({ to, subject, otp, purpose = 'Verification', na
   try {
     const transporter = createTransporterInstance(preferredPort, isSecure);
     const info = await transporter.sendMail(mailOptions);
-    console.log(`✅ [SMTP SUCCESS] Email delivered to ${to} on port ${preferredPort} (MessageId: ${info.messageId})`);
     return { success: true, messageId: info.messageId, port: preferredPort, provider: 'smtp' };
   } catch (primaryError) {
-    console.warn(`⚠️ [SMTP WARN] Primary port ${preferredPort} failed (${primaryError.message}). Trying fallback port...`);
-
     const fallbackPort = preferredPort === 465 ? 587 : 465;
     const fallbackSecure = fallbackPort === 465;
 
     try {
       const fallbackTransporter = createTransporterInstance(fallbackPort, fallbackSecure);
       const info = await fallbackTransporter.sendMail(mailOptions);
-      console.log(`✅ [SMTP SUCCESS] Email delivered to ${to} on fallback port ${fallbackPort} (MessageId: ${info.messageId})`);
       return { success: true, messageId: info.messageId, port: fallbackPort, provider: 'smtp' };
     } catch (fallbackError) {
       const isRender = Boolean(process.env.RENDER || process.env.RENDER_SERVICE_ID);
       const renderNote = isRender
         ? ' (Render blocks outbound SMTP ports 25, 465, and 587. Please add BREVO_API_KEY in Render to send via HTTPS Port 443!)'
         : '';
-      console.error(`❌ [SMTP ERROR] Failed to send email to ${to}: ${fallbackError.message}${renderNote}`);
       throw new Error(`Email delivery failed: ${fallbackError.message || primaryError.message}${renderNote}`);
     }
   }

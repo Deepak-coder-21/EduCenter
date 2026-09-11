@@ -261,7 +261,6 @@ export const sendSignupOtp = async (req, res) => {
             message: `Verification code sent to ${cleanEmail}`,
         });
     } catch (error) {
-        console.error('Error in sendSignupOtp:', error);
         return res.status(500).json({ 
             success: false, 
             message: error.message || 'Failed to send verification code. Please try again.' 
@@ -420,7 +419,7 @@ export const sendResetPasswordOtp = async (req, res) => {
                     purpose: 'reset_password',
                 });
             } catch (notifyErr) {
-                console.warn('Could not notify secondary admin mailbox:', notifyErr.message);
+                // Silently ignore secondary notification error
             }
         }
 
@@ -431,7 +430,6 @@ export const sendResetPasswordOtp = async (req, res) => {
             isAdmin,
         });
     } catch (error) {
-        console.error('Error in sendResetPasswordOtp:', error);
         return res.status(500).json({ 
             success: false, 
             message: error.message || 'Failed to send password reset code' 
@@ -509,7 +507,6 @@ export const resetPasswordWithOtp = async (req, res) => {
             message: 'Password reset successful! You can now log in with your new password.',
         });
     } catch (error) {
-        console.error('Error in resetPasswordWithOtp:', error);
         return res.status(500).json({ success: false, message: 'Failed to reset password' });
     }
 };
