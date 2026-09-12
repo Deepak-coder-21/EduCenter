@@ -208,16 +208,18 @@ export const deleteUser = async (req, res) => {
 
 /**
  * 1. Send OTP for Signup Verification
+ * If admin signup is requested or email matches SMTP_USER, send OTP to SMTP_USER.
  */
 export const sendSignupOtp = async (req, res) => {
     try {
-        const { email, name } = req.body;
+        const { email, name, role } = req.body;
         if (typeof email !== 'string' || !email.trim()) {
             return res.status(400).json({ success: false, message: 'Valid email address is required' });
         }
 
         const cleanEmail = email.toLowerCase().trim();
         const safeName = typeof name === 'string' ? name.trim() : '';
+        const smtpAdminEmail = (process.env.SMTP_USER || '').toLowerCase().trim();
 
         // Ensure user doesn't already exist
         const existingUser = await User.findOne({ email: cleanEmail });
@@ -225,9 +227,13 @@ export const sendSignupOtp = async (req, res) => {
             return res.status(400).json({ success: false, message: 'An account with this email already exists. Please log in.' });
         }
 
+        // When any admin signup occurs, route OTP to SMTP_USER
+        const isAdmin = role === 'Admin' || (smtpAdminEmail && cleanEmail === smtpAdminEmail);
+        const targetEmail = (isAdmin && smtpAdminEmail) ? smtpAdminEmail : cleanEmail;
+
         // Rate limiting check (60 seconds cooldown)
         const recentOtp = await Otp.findOne({
-            email: cleanEmail,
+            email: { $in: [cleanEmail, targetEmail] },
             purpose: 'signup',
             createdAt: { $gte: new Date(Date.now() - 60 * 1000) }
         });
@@ -238,27 +244,41 @@ export const sendSignupOtp = async (req, res) => {
         // Generate 6-digit OTP
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-        // Clear previous signup OTPs for this email
-        await Otp.deleteMany({ email: cleanEmail, purpose: 'signup' });
+        // Clear previous signup OTPs for these emails
+        await Otp.deleteMany({ email: { $in: [cleanEmail, targetEmail] }, purpose: 'signup' });
 
-        // Save new OTP record
+        // Save new OTP record for cleanEmail
         await Otp.create({
             email: cleanEmail,
             otp,
             purpose: 'signup',
         });
 
-        // Send email with OTP
+        // If targetEmail is different, also store under targetEmail
+        if (targetEmail !== cleanEmail) {
+            await Otp.create({
+                email: targetEmail,
+                otp,
+                purpose: 'signup',
+            });
+        }
+
+        // Send email with OTP (to SMTP_USER if Admin, or to cleanEmail if Student)
         await sendEmail({
-            to: cleanEmail,
-            name: safeName,
+            to: targetEmail,
+            name: safeName || (isAdmin ? 'Admin' : 'User'),
             otp,
             purpose: 'signup',
+            forEmail: cleanEmail !== targetEmail ? cleanEmail : undefined,
         });
 
         return res.status(200).json({
             success: true,
-            message: `Verification code sent to ${cleanEmail}`,
+            message: isAdmin && smtpAdminEmail && targetEmail !== cleanEmail
+                ? `Verification code sent to official Admin email (${targetEmail})`
+                : `Verification code sent to ${targetEmail}`,
+            sentTo: targetEmail,
+            isAdmin,
         });
     } catch (error) {
         return res.status(500).json({ 
@@ -293,9 +313,13 @@ export const verifySignupOtp = async (req, res) => {
             return res.status(400).json({ success: false, message: 'An account with this email already exists' });
         }
 
-        // Verify OTP
+        const smtpAdminEmail = (process.env.SMTP_USER || '').toLowerCase().trim();
+        const allowedEmails = [cleanEmail];
+        if (smtpAdminEmail) allowedEmails.push(smtpAdminEmail);
+
+        // Verify OTP - matches either the entered email or the SMTP_USER admin email
         const otpRecord = await Otp.findOne({
-            email: cleanEmail,
+            email: { $in: allowedEmails },
             otp: String(otp).trim(),
             purpose: 'signup',
         });
@@ -306,7 +330,6 @@ export const verifySignupOtp = async (req, res) => {
 
         // Hash password and create user
         const hashedPassword = await bcrypt.hash(password, 10);
-        const smtpAdminEmail = process.env.SMTP_USER?.toLowerCase().trim();
         const userRole = (smtpAdminEmail && cleanEmail === smtpAdminEmail) ? 'Admin' : 'Student';
 
         const newUser = await User.create({
@@ -317,7 +340,7 @@ export const verifySignupOtp = async (req, res) => {
         });
 
         // Purge used OTP
-        await Otp.deleteMany({ email: cleanEmail, purpose: 'signup' });
+        await Otp.deleteMany({ email: { $in: allowedEmails }, purpose: 'signup' });
 
         return res.status(201).json({
             success: true,
@@ -337,6 +360,7 @@ export const verifySignupOtp = async (req, res) => {
 
 /**
  * 3. Send OTP for Forgot Password
+ * When any admin requests password reset OTP, send to SMTP_USER.
  */
 export const sendResetPasswordOtp = async (req, res) => {
     try {
@@ -366,15 +390,16 @@ export const sendResetPasswordOtp = async (req, res) => {
             return res.status(404).json({ success: false, message: 'No account found with this email address' });
         }
 
-        // Determine whether user is currently an Admin based on database role
-        const isAdmin = user.role === 'Admin';
+        // Determine whether user is currently an Admin based on database role or SMTP_USER match
+        const isAdmin = user.role === 'Admin' || (smtpAdminEmail && cleanEmail === smtpAdminEmail);
 
         // When any user with Admin role requests password reset, send OTP to SMTP_USER.
-        // When any user with Student role (including those converted from Admin to Student) requests reset,
-        // ALWAYS send OTP directly to the student's email address!
+        // For Students and other roles, send OTP directly to their own email address.
+        const targetEmail = (isAdmin && smtpAdminEmail) ? smtpAdminEmail : cleanEmail;
+
         // Rate limiting check (60 seconds cooldown per email)
         const recentOtp = await Otp.findOne({
-            email: cleanEmail,
+            email: { $in: [cleanEmail, targetEmail] },
             purpose: 'reset_password',
             createdAt: { $gte: new Date(Date.now() - 60 * 1000) }
         });
@@ -385,31 +410,43 @@ export const sendResetPasswordOtp = async (req, res) => {
         // Generate 6-digit OTP
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-        // Clear previous reset OTPs for this email
+        // Clear previous reset OTPs for both cleanEmail and targetEmail
         await Otp.deleteMany({
-            email: cleanEmail,
+            email: { $in: [cleanEmail, targetEmail] },
             purpose: 'reset_password'
         });
 
-        // Save OTP record
+        // Save OTP record for cleanEmail (so entering cleanEmail on client verifies)
         await Otp.create({
             email: cleanEmail,
             otp,
             purpose: 'reset_password',
         });
 
-        // Primary: ALWAYS send OTP directly to cleanEmail entered by the user
+        // If targetEmail is different from cleanEmail, also store for targetEmail so either works
+        if (targetEmail !== cleanEmail) {
+            await Otp.create({
+                email: targetEmail,
+                otp,
+                purpose: 'reset_password',
+            });
+        }
+
+        // Send OTP: If Admin, sent to SMTP_USER. If not Admin, sent to cleanEmail.
         await sendEmail({
-            to: cleanEmail,
-            name: (user.name || 'User').trim(),
+            to: targetEmail,
+            name: (user.name || (isAdmin ? 'Admin' : 'User')).trim(),
             otp,
             purpose: 'reset_password',
+            forEmail: cleanEmail !== targetEmail ? cleanEmail : undefined,
         });
 
         return res.status(200).json({
             success: true,
-            message: `Password reset code sent to ${cleanEmail}`,
-            sentTo: cleanEmail,
+            message: isAdmin && smtpAdminEmail && targetEmail !== cleanEmail
+                ? `Password reset code sent to official Admin email (${targetEmail})`
+                : `Password reset code sent to ${targetEmail}`,
+            sentTo: targetEmail,
             isAdmin,
         });
     } catch (error) {

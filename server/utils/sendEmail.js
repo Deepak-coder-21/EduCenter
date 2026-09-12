@@ -204,7 +204,7 @@ export const verifySmtpConnection = async () => {
  * Send an email with a 6-digit OTP code.
  * Prioritizes Brevo HTTP API (Port 443) -> Resend HTTP API (Port 443) -> Nodemailer SMTP fallback.
  */
-export const sendEmail = async ({ to, subject, otp, purpose = 'Verification', name = '' }) => {
+export const sendEmail = async ({ to, subject, otp, purpose = 'Verification', name = '', forEmail = '' }) => {
   const brevoApiKey = process.env.BREVO_API_KEY?.trim();
   const resendApiKey = process.env.RESEND_API_KEY?.trim();
   const smtpUser = process.env.SMTP_USER?.trim();
@@ -249,6 +249,7 @@ export const sendEmail = async ({ to, subject, otp, purpose = 'Verification', na
       .content { padding: 32px 28px; color: #334155; }
       .greeting { font-size: 16px; font-weight: 600; color: #0f172a; margin-bottom: 12px; }
       .desc { font-size: 14px; line-height: 1.6; color: #64748b; margin-bottom: 24px; }
+      .admin-note { margin: 16px 0; padding: 12px 16px; background-color: #eff6ff; border-left: 4px solid #3b82f6; border-radius: 6px; font-size: 13px; color: #1e40af; }
       .otp-box { background: #f1f5f9; border: 2px dashed #cbd5e1; border-radius: 12px; padding: 20px; text-align: center; margin: 24px 0; }
       .otp-label { font-size: 11px; text-transform: uppercase; font-weight: 700; color: #64748b; letter-spacing: 1px; margin-bottom: 8px; }
       .otp-code { font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #4f46e5; font-family: monospace, Courier, monospace; margin: 0; }
@@ -265,6 +266,10 @@ export const sendEmail = async ({ to, subject, otp, purpose = 'Verification', na
       <div class="content">
         <div class="greeting">Hello${name ? ` ${name}` : ''},</div>
         <div class="desc">${purposeDescription}</div>
+        ${forEmail ? `
+        <div class="admin-note">
+          <strong>Security Notice:</strong> This OTP was requested for admin account: <strong>${forEmail}</strong>
+        </div>` : ''}
         
         <div class="otp-box">
           <div class="otp-label">Your 6-Digit One-Time Password</div>
